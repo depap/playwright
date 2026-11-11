@@ -1,0 +1,19 @@
+{
+  "name": "playwright-boilerplate",
+  "version": "1.0.0",
+  "description": "Playwright test boilerplate",
+  "scripts": {
+    "test": "playwright test",
+    "test:headed": "playwright test --headed",
+    "test:ui": "playwright test --ui",
+    "test:debug": "playwright test --debug",
+    "show-report": "playwright show-report",
+    "codegen": "playwright codegen"
+  },
+  "license": "ISC",
+  "devDependencies": {
+    "@playwright/test": "^1.65.0",
+    "@types/node": "^26.6.6",
+    "typescript": "^7.0.2"
+  }
+}
