@@ -1,11 +1,4 @@
 import { test } from './fixtures';
-import { openSectionFromHome } from './utils/homeFlows';
-import {
-  basicAuthPageIsLoaded,
-  basicAuthFooterLinksPresent,
-  elementalSeleniumOpensInNewTab,
-  basicAuthRejectsWrongCredentials,
-} from './utils/basicAuthFlows';
 
 test.describe('Basic Auth', () => {
   test.describe('with valid credentials (admin/admin)', () => {
@@ -15,29 +8,29 @@ test.describe('Basic Auth', () => {
 
     test('page loads with heading and congratulations message', async ({ basicAuthPage }) => {
       await basicAuthPage.open();
-      await basicAuthPageIsLoaded(basicAuthPage);
+      await basicAuthPage.isLoaded();
     });
 
     test('reachable from the home page', async ({ homePageFor }) => {
       const home = homePageFor('Basic Auth');
       await home.open();
-      await openSectionFromHome(home, '/basic_auth');
+      await home.openSection('/basic_auth');
     });
 
     test('footer links are present', async ({ basicAuthPage }) => {
       await basicAuthPage.open();
-      await basicAuthFooterLinksPresent(basicAuthPage);
+      await basicAuthPage.footerLinksPresent();
     });
 
     test('Elemental Selenium link opens in a new tab', async ({ basicAuthPage }) => {
       await basicAuthPage.open();
-      await elementalSeleniumOpensInNewTab(basicAuthPage);
+      await basicAuthPage.elementalSeleniumOpensInNewTab();
     });
   });
 
   test('direct load with credentials embedded in URL', async ({ basicAuthPage }) => {
     await basicAuthPage.openWithCredentials('admin', 'admin');
-    await basicAuthPageIsLoaded(basicAuthPage);
+    await basicAuthPage.isLoaded();
   });
 
   test.describe('with wrong credentials', () => {
@@ -46,7 +39,8 @@ test.describe('Basic Auth', () => {
     });
 
     test('navigation is rejected with 401', async ({ basicAuthPage }) => {
-      await basicAuthRejectsWrongCredentials(basicAuthPage);
+      await basicAuthPage.open();
+      await basicAuthPage.rejectsWrongCredentials();
     });
   });
 });

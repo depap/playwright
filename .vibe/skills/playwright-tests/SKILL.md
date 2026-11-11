@@ -12,29 +12,31 @@ Applies to all tests in `tests/*.spec.ts`. Config lives in `playwright.config.ts
 ```
 tests/
 ├── example.spec.ts      # spec: only legible method calls — no locators, no raw expect/action logic
-├── pages/               # Page Objects: one class per page/component
+├── pages/               # full Page Objects: locators + navigation + actions + assertions
 │   └── DocsPage.ts
-└── utils/               # all logic (actions + assertions + flows) as plain functions
-    └── docsFlows.ts
+└── utils/               # only shared/complex helpers reused by multiple page objects
+    └── shared.ts
 ```
 
 Three rules:
 
 1. **Use the Page Object Model.** Every page/component used in a test gets a class in `tests/pages/`.
 2. **Locators live in the constructor and are parameterized.** Constructor takes `page` plus any values the locators depend on; locators are assigned once as public `readonly` fields and used directly — no getters. Never build a locator inside a spec or a util.
-3. **Specs contain only method calls.** A spec instantiates page objects and calls util functions — it reads like a story. All actual logic (clicks, fills, navigation, assertions) goes in `tests/utils/`.
+3. **Specs contain only method calls.** A spec receives a page object from a fixture and calls its methods (`page.open()`, `page.addElements(3)`) — it reads like a story. The page object owns all page-specific logic, including `expect(...)` assertions; `tests/utils/` is reserved for shared or complex helpers reused by multiple page objects.
 
 Page Object (`tests/pages/DocsPage.ts`):
 
 ```ts
-import { Page, Locator } from '@playwright/test';
+import { expect, Page, Locator } from '@playwright/test';
 
 export class DocsPage {
+  readonly page: Page;
   readonly search: Locator;
   readonly results: Locator;
   readonly heading: Locator;
 
-  constructor(private readonly page: Page, private readonly section: string) {
+  constructor(page: Page, section: string) {
+    this.page = page;
     this.search = page.getByPlaceholder('Search');
     this.results = page.getByRole('list').filter({ hasText: section });
     this.heading = page.getByRole('heading', { name: section });
@@ -43,38 +45,40 @@ export class DocsPage {
   async open(): Promise<void> {
     await this.page.goto('/'); // baseURL is set in config — relative URLs only
   }
+
+  async searchShowsResults(term: string): Promise<void> {
+    await this.search.fill(term);
+    await expect(this.results).toContainText(term);
+    await expect(this.heading).toBeVisible();
+  }
 }
 ```
 
-Util with the logic (`tests/utils/docsFlows.ts`):
+Shared helper (`tests/utils/shared.ts`) — only for logic reused by multiple page objects:
 
 ```ts
-import { expect } from '@playwright/test';
-import { DocsPage } from '../pages/DocsPage';
+import { expect, Page, Locator } from '@playwright/test';
 
-export async function searchShowsResults(docs: DocsPage, term: string): Promise<void> {
-  await docs.search.fill(term);
-  await expect(docs.results).toContainText(term);
-  await expect(docs.heading).toBeVisible();
+export async function linkOpensInNewTab(page: Page, link: Locator, urlPattern: RegExp): Promise<void> {
+  const [popup] = await Promise.all([page.waitForEvent('popup'), link.click()]);
+  await expect(popup).toHaveURL(urlPattern);
+  await popup.close();
 }
 ```
 
 Spec — legible, logic-free (`tests/example.spec.ts`):
 
 ```ts
-import { test } from '@playwright/test';
-import { DocsPage } from './pages/DocsPage';
-import { searchShowsResults } from './utils/docsFlows';
+import { test } from './fixtures';
 
-test('search shows results for the current section', async ({ page }) => {
-  const docs = new DocsPage(page, 'Introduction');
-  await docs.open();
-  await searchShowsResults(docs, 'locators');
+test('search shows results for the current section', async ({ docsPage }) => {
+  await docsPage.open();
+  await docsPage.searchShowsResults('locators');
 });
 ```
 
-- Utils are plain async functions that receive page objects (and data) and return `void`. Assertions belong in utils — they are part of the logic.
-- Keep util functions small and named as actions: `loginAs(user)`, `addItem(name)`, `expectCartTotal(value)`.
+- The POM owns all page-specific logic: locators, `open()`, action methods, and assertion methods like `isLoaded()` — `expect(...)` calls included. Specs call them directly: `page.searchShowsResults(...)`.
+- `tests/utils/` holds only shared or complex helpers reused by multiple page objects (popup handling, API login, ...). Keep them small and named as actions.
 - Group specs with `test.describe`; use `test.beforeEach` for shared setup (e.g. opening a page); use `test.step` inside specs only for reporting phases, not for logic.
 - Tests must be independent: `fullyParallel: true` is on. No shared state between tests; create unique data per test (e.g. suffix with `test.info().workerIndex` + timestamp).
 
@@ -94,7 +98,7 @@ await expect(locator).toHaveText('Welcome, depap');
 await expect(locator).toHaveCount(3);
 ```
 
-- Prefer `expect(locator).to*` — auto-retrying, gives good error messages. In this repo these calls live in utils, on locators exposed by the page object.
+- Prefer `expect(locator).to*` — auto-retrying, gives good error messages. In this repo these calls live in the POM's assertion methods.
 - For non-DOM values (variables, API results): `expect.poll(() => value).toBe(...)`.
 - For visual checks: `await expect(page).toHaveScreenshot()` (set `maxDiffPixelRatio` in config for stability).
 - Tune timeout once globally (`expect.configure({ timeout: 5000 })`) rather than per-call sleeps.
@@ -152,7 +156,7 @@ export const test = base.extend({
 ## Anti-pattern checklist (reject in review)
 
 - `waitForTimeout`, `waitForSelector`, `waitForLoadState('networkidle')`
-- locators, `expect(...)`, or action logic written directly in a `*.spec.ts` — specs only call page-object/util methods
+- locators, `expect(...)`, or action logic written directly in a `*.spec.ts` — specs only call page-object methods (`page.open()`, `page.addElements(3)`)
 - locators not declared as public `readonly` fields in the POM constructor (built ad-hoc in methods, or hidden behind getters)
 - `expect(await page.textContent(...)).toBe(...)` — assert on locators, not snapshots
 - `page.$(...)` one-shot queries (no auto-wait) — use `page.locator(...)`

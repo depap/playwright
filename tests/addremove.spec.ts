@@ -1,43 +1,36 @@
 import { test } from './fixtures';
-import { openSectionFromHome } from './utils/homeFlows';
-import {
-  addRemovePageIsLoaded,
-  addElements,
-  removeElementAt,
-  removeAllElements,
-} from './utils/addRemoveFlows';
 
 test.describe('Add/Remove Elements', () => {
   test('page loads empty with add button', async ({ addRemovePage }) => {
     await addRemovePage.open();
-    await addRemovePageIsLoaded(addRemovePage);
+    await addRemovePage.isLoaded();
   });
 
   test('reachable from the home page', async ({ homePageFor }) => {
     const home = homePageFor('Add/Remove Elements');
     await home.open();
-    await openSectionFromHome(home, '/add_remove_elements/');
+    await home.openSection('/add_remove_elements/');
   });
 
   test('adds a single element', async ({ addRemovePage }) => {
     await addRemovePage.open();
-    await addElements(addRemovePage, 1);
+    await addRemovePage.addElements(1);
   });
 
   test('adds three elements', async ({ addRemovePage }) => {
     await addRemovePage.open();
-    await addElements(addRemovePage, 3);
+    await addRemovePage.addElements(3);
   });
 
   test('removes the first element', async ({ addRemovePage }) => {
     await addRemovePage.open();
-    await addElements(addRemovePage, 2);
-    await removeElementAt(addRemovePage);
+    await addRemovePage.addElements(2);
+    await addRemovePage.removeElementAt();
   });
 
   test('removes all elements', async ({ addRemovePage }) => {
     await addRemovePage.open();
-    await addElements(addRemovePage, 3);
-    await removeAllElements(addRemovePage);
+    await addRemovePage.addElements(3);
+    await addRemovePage.removeAllElements();
   });
 });
