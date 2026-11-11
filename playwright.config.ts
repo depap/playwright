@@ -18,7 +18,7 @@ export default defineConfig({
   /* Shared settings for all the projects below */
   use: {
     /* Base URL to use in actions like `await page.goto('/')` */
-    baseURL: 'https://playwright.dev',
+    baseURL: 'https://the-internet.herokuapp.com',
     /* Collect trace when retrying the failed test */
     trace: 'on-first-retry',
   },
