@@ -5,3 +5,4 @@
 /playwright/.cache
 /playwright/.auth/
 .playwright-mcp
+/report.json

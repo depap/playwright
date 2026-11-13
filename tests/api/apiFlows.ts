@@ -8,7 +8,7 @@ export async function expectStatus(request: APIRequestContext, path: string, sta
 export async function expectRedirect(request: APIRequestContext, path: string): Promise<void> {
   const response = await request.get(path, { maxRedirects: 0 });
   expect(response.status()).toBe(302);
-  expect(response.headers()['location']).toContain('the-internet.herokuapp.com');
+  expect(response.headers()['location']).toContain('/status_codes');
 }
 
 export async function expectUnauthorized(request: APIRequestContext, path: string): Promise<void> {
